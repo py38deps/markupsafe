@@ -1,0 +1,84 @@
+name: Build
+
+on:
+  push:
+    branches: [main, stable]
+    paths-ignore: ['docs/**', 'README.md']
+  workflow_dispatch:
+
+jobs:
+  sdist:
+    name: sdist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
+        with:
+          enable-cache: true
+          prune-cache: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: "3.9"
+      - run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> $GITHUB_ENV
+      - run: uv build --sdist
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sdist
+          path: ./dist
+
+  wheels:
+    name: wheels / ${{ matrix.py }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+        py:
+          - "cp38"
+          - "cp39"
+          - "cp310"
+          - "cp311"
+          - "cp312"
+          - "cp313"
+          - "cp313t"
+          - "cp314"
+          - "cp314t"
+        include:
+          # CPython 3.8 and 3.13t are not in the current container images
+          # anymore, pin the last images that still contain them.
+          # https://github.com/pypa/manylinux/issues/1882
+          - py: "cp38"
+            image_tag: "2026.05.02-2"
+          - py: "cp313t"
+            image_tag: "2026.05.02-2"
+    env:
+      CIBW_BUILD: "${{ matrix.py }}-*"
+      CIBW_MANYLINUX_X86_64_IMAGE: "${{ matrix.image_tag && format('quay.io/pypa/manylinux2014_x86_64:{0}', matrix.image_tag) || '' }}"
+      CIBW_MANYLINUX_AARCH64_IMAGE: "${{ matrix.image_tag && format('quay.io/pypa/manylinux2014_aarch64:{0}', matrix.image_tag) || '' }}"
+      CIBW_MUSLLINUX_X86_64_IMAGE: "${{ matrix.image_tag && format('quay.io/pypa/musllinux_1_2_x86_64:{0}', matrix.image_tag) || '' }}"
+      CIBW_MUSLLINUX_AARCH64_IMAGE: "${{ matrix.image_tag && format('quay.io/pypa/musllinux_1_2_aarch64:{0}', matrix.image_tag) || '' }}"
+      # CPython 3.8 has no Windows ARM64 builds, skip that architecture.
+      CIBW_ARCHS_WINDOWS: "${{ matrix.py == 'cp38' && 'auto' || '' }}"
+      # CPython 3.8 is not available for riscv64, skip that architecture.
+      CIBW_ARCHS_LINUX: "${{ matrix.py == 'cp38' && 'x86_64 aarch64' || '' }}"
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
+        with:
+          enable-cache: true
+          prune-cache: false
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+        with:
+          platforms: arm64,riscv64
+      - run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> $GITHUB_ENV
+      - uses: pypa/cibuildwheel@7c619efba910c04005a835b110b057fc28fd6e93 # v3.2.0
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wheels-${{ matrix.py }}-${{ matrix.os }}
+          path: ./wheelhouse/*.whl
+          if-no-files-found: error
