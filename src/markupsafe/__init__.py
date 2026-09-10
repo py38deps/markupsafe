@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import collections.abc as cabc
 import string
+import sys
 import typing as t
 
 try:
@@ -294,11 +295,29 @@ class Markup(str):
     def casefold(self, /) -> te.Self:
         return self.__class__(super().casefold())
 
-    def removeprefix(self, prefix: str, /) -> te.Self:
-        return self.__class__(super().removeprefix(prefix))
+    if sys.version_info >= (3, 9):
 
-    def removesuffix(self, suffix: str) -> te.Self:
-        return self.__class__(super().removesuffix(suffix))
+        def removeprefix(self, prefix: str, /) -> te.Self:
+            return self.__class__(super().removeprefix(prefix))
+
+        def removesuffix(self, suffix: str) -> te.Self:
+            return self.__class__(super().removesuffix(suffix))
+
+    else:
+        # ``str.removeprefix`` and ``str.removesuffix`` were added in Python
+        # 3.9, provide the same behaviour on 3.8 instead of dropping them.
+
+        def removeprefix(self, prefix: str, /) -> te.Self:
+            if self.startswith(prefix):
+                return self.__class__(self[len(prefix) :])
+
+            return self.__class__(self)
+
+        def removesuffix(self, suffix: str) -> te.Self:
+            if suffix and self.endswith(suffix):
+                return self.__class__(self[: -len(suffix)])
+
+            return self.__class__(self)
 
     def partition(self, sep: str, /) -> tuple[te.Self, te.Self, te.Self]:
         left, sep, right = super().partition(sep)

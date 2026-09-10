@@ -187,6 +187,26 @@ def test_splitting() -> None:
     assert Markup("a\nb").splitlines() == expect
 
 
+@pytest.mark.parametrize(
+    ("method", "arg", "expect"),
+    (
+        ("removeprefix", "foo", "bar"),
+        ("removeprefix", "bar", "foobar"),
+        ("removeprefix", "", "foobar"),
+        ("removesuffix", "bar", "foo"),
+        ("removesuffix", "foo", "foobar"),
+        ("removesuffix", "", "foobar"),
+    ),
+)
+def test_remove_prefix_suffix(method: str, arg: str, expect: str) -> None:
+    """``str.removeprefix`` and ``str.removesuffix`` are only available as
+    ``str`` methods on Python 3.9 and later, the backport provides them on 3.8.
+    """
+    result = getattr(Markup("foobar"), method)(arg)
+    assert type(result) is Markup  # noqa: E721
+    assert result == expect
+
+
 def test_mul() -> None:
     assert Markup("a") * 3 == Markup("aaa")
 
