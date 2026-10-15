@@ -52,8 +52,13 @@ jobs:
           # https://github.com/pypa/manylinux/issues/1882
           - py: "cp38"
             image_tag: "2026.05.02-2"
+            # the pinned x86_64/aarch64 images are the only ones carrying
+            # CPython 3.8, upstream wheels cover the other architectures
+            archs_linux: "x86_64 aarch64"
           - py: "cp313t"
             image_tag: "2026.05.02-2"
+            # CPython 3.13t is gone from the current armv7l/ppc64le images
+            archs_linux: "x86_64 aarch64 riscv64"
     env:
       CIBW_BUILD: "${{ matrix.py }}-*"
       CIBW_MANYLINUX_X86_64_IMAGE: "${{ matrix.image_tag && format('quay.io/pypa/manylinux2014_x86_64:{0}', matrix.image_tag) || '' }}"
@@ -62,8 +67,8 @@ jobs:
       CIBW_MUSLLINUX_AARCH64_IMAGE: "${{ matrix.image_tag && format('quay.io/pypa/musllinux_1_2_aarch64:{0}', matrix.image_tag) || '' }}"
       # CPython 3.8 has no Windows ARM64 builds, skip that architecture.
       CIBW_ARCHS_WINDOWS: "${{ matrix.py == 'cp38' && 'auto' || '' }}"
-      # CPython 3.8 is not available for riscv64, skip that architecture.
-      CIBW_ARCHS_LINUX: "${{ matrix.py == 'cp38' && 'x86_64 aarch64' || '' }}"
+      # empty for the other versions, use the architectures from pyproject.toml
+      CIBW_ARCHS_LINUX: "${{ matrix.archs_linux || '' }}"
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
@@ -74,7 +79,7 @@ jobs:
         if: runner.os == 'Linux'
         uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
         with:
-          platforms: arm64,riscv64
+          platforms: arm64,arm,ppc64le,riscv64
       - run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> $GITHUB_ENV
       - uses: pypa/cibuildwheel@7c619efba910c04005a835b110b057fc28fd6e93 # v3.2.0
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
