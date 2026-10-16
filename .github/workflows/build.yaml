@@ -61,6 +61,9 @@ jobs:
             archs_linux: "x86_64 aarch64 riscv64"
     env:
       CIBW_BUILD: "${{ matrix.py }}-*"
+      # cibuildwheel v3 only builds the free-threaded cp313t/cp314t wheels when
+      # this group is enabled, the cp315 pass below runs v4 which rejects it
+      CIBW_ENABLE: "cpython-freethreading"
       CIBW_MANYLINUX_X86_64_IMAGE: "${{ matrix.image_tag && format('quay.io/pypa/manylinux2014_x86_64:{0}', matrix.image_tag) || '' }}"
       CIBW_MANYLINUX_AARCH64_IMAGE: "${{ matrix.image_tag && format('quay.io/pypa/manylinux2014_aarch64:{0}', matrix.image_tag) || '' }}"
       CIBW_MUSLLINUX_X86_64_IMAGE: "${{ matrix.image_tag && format('quay.io/pypa/musllinux_1_2_x86_64:{0}', matrix.image_tag) || '' }}"
@@ -85,5 +88,39 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: wheels-${{ matrix.py }}-${{ matrix.os }}
+          path: ./wheelhouse/*.whl
+          if-no-files-found: error
+
+  wheels-cp315:
+    name: wheels / cp315 / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+    env:
+      # CPython 3.15 is only known to cibuildwheel v4, which dropped the
+      # CPython 3.8 support the pass above needs, so 3.15 gets a second pass
+      # over the same sdist with v4.
+      CIBW_BUILD: "cp315-* cp315t-*"
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
+        with:
+          enable-cache: true
+          prune-cache: false
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+        with:
+          platforms: arm64,arm,ppc64le,riscv64
+      - run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> $GITHUB_ENV
+      - uses: pypa/cibuildwheel@e090b81e30c4d855ea63bf4b6e59204c09a101ae # v4.2.1
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wheels-cp315-${{ matrix.os }}
           path: ./wheelhouse/*.whl
           if-no-files-found: error

@@ -213,10 +213,10 @@ skip_install = true
 commands = [["uv", "lock", {replace = "posargs", default = ["-U"], extend = true}]]
 
 [tool.cibuildwheel]
-# cibuildwheel v4 builds free-threaded CPython unconditionally, but it also
-# dropped CPython 3.8, so the backport stays on v3 and keeps enabling the
-# group that v3 requires to build the cp313t/cp314t wheels.
-enable = "cpython-freethreading"
+# The free-threaded cp313t/cp314t wheels need the cpython-freethreading group,
+# which only cibuildwheel v3 knows. The workflow sets CIBW_ENABLE for the v3
+# pass instead of this file, because the cp315 pass runs v4 (v4 always builds
+# free-threaded versions and rejects that group name).
 build-frontend = "build[uv]"
 
 [[tool.cibuildwheel.overrides]]
