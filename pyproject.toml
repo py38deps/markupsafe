@@ -230,6 +230,12 @@ select = "*-musllinux_riscv64"
 # removed it together with the upgrade to v4, which handles the frontend there
 build-frontend = "build"
 
+[[tool.cibuildwheel.overrides]]
+select = "cp314-* cp314t-*"
+# cibuildwheel v4 raises the macOS x86_64 deployment target for CPython 3.14,
+# v3 still uses 10.13; set it here so the macOS wheel tags match upstream
+macos-deployment-target = "10.15"
+
 [tool.cibuildwheel.linux]
 # overridden in workflow for parallel envs
 archs = ["x86_64", "aarch64", "armv7l", "ppc64le", "riscv64"]
