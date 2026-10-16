@@ -224,6 +224,12 @@ select = "*-musllinux_ppc64le"
 # uv is not available
 build-frontend = "build"
 
+[[tool.cibuildwheel.overrides]]
+select = "*-musllinux_riscv64"
+# uv is not available, the override is needed with cibuildwheel v3; upstream
+# removed it together with the upgrade to v4, which handles the frontend there
+build-frontend = "build"
+
 [tool.cibuildwheel.linux]
 # overridden in workflow for parallel envs
 archs = ["x86_64", "aarch64", "armv7l", "ppc64le", "riscv64"]
