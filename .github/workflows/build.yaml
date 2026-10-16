@@ -101,16 +101,11 @@ jobs:
           - { name: linux, os: ubuntu-latest }
           - { name: windows, os: windows-latest }
           - { name: macos, os: macos-latest }
-          # upstream ships the mobile wheels for 3.13 and later only, and has
-          # no free-threaded mobile builds, so 3.15 is the version built here
-          - { name: android, os: ubuntu-latest, platform: android, build: "cp315-*" }
-          - { name: ios, os: macos-latest, platform: ios, build: "cp315-*" }
     env:
       # CPython 3.15 is only known to cibuildwheel v4, which dropped the
       # CPython 3.8 support the pass above needs, so 3.15 gets a second pass
       # over the same sdist with v4.
-      CIBW_BUILD: "${{ matrix.build || 'cp315-* cp315t-*' }}"
-      CIBW_PLATFORM: "${{ matrix.platform || 'auto' }}"
+      CIBW_BUILD: "cp315-* cp315t-*"
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
@@ -118,7 +113,7 @@ jobs:
           enable-cache: true
           prune-cache: false
       - name: Set up QEMU
-        if: matrix.name == 'linux'
+        if: runner.os == 'Linux'
         uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
         with:
           platforms: arm64,arm,ppc64le,riscv64
@@ -138,10 +133,11 @@ jobs:
       matrix:
         include:
           # upstream publishes android/ios wheels for CPython 3.13 and later,
-          # which is exactly what cibuildwheel knows these platforms for; the
-          # 3.15 mobile wheels are built by the v4 pass above
-          - { build: "cp313-* cp314-*", platform: android, os: ubuntu-latest }
-          - { build: "cp313-* cp314-*", platform: ios, os: macos-latest }
+          # only cibuildwheel v4 knows those versions and carries the newer
+          # interpreter payloads (v3 builds cp313 android against API level 21,
+          # where upstream and v4 use 24)
+          - { build: "cp313-* cp314-* cp315-*", platform: android, os: ubuntu-latest }
+          - { build: "cp313-* cp314-* cp315-*", platform: ios, os: macos-latest }
     env:
       CIBW_BUILD: ${{ matrix.build }}
       CIBW_PLATFORM: ${{ matrix.platform }}
@@ -152,7 +148,7 @@ jobs:
           enable-cache: true
           prune-cache: false
       - run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> $GITHUB_ENV
-      - uses: pypa/cibuildwheel@7c619efba910c04005a835b110b057fc28fd6e93 # v3.2.0
+      - uses: pypa/cibuildwheel@e090b81e30c4d855ea63bf4b6e59204c09a101ae # v4.2.1
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: wheels-mobile-${{ matrix.platform }}
