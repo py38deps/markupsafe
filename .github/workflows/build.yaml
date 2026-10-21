@@ -54,13 +54,13 @@ jobs:
           # https://github.com/pypa/manylinux/issues/1882
           - py: "cp38"
             image_tag: "2026.05.02-2"
-            # the pinned x86_64/aarch64 images are the only ones carrying
-            # CPython 3.8, upstream wheels cover the other architectures
-            archs_linux: "x86_64 aarch64"
+            # the default armv7l/ppc64le/riscv64 images still carry CPython
+            # 3.8 as well, upstream covers those architectures for cp39+
+            archs_linux: "x86_64 aarch64 armv7l ppc64le riscv64"
           - py: "cp313t"
             image_tag: "2026.05.02-2"
-            # CPython 3.13t is gone from the current armv7l/ppc64le images
-            archs_linux: "x86_64 aarch64 riscv64"
+            # the default armv7l/ppc64le images still carry CPython 3.13t
+            archs_linux: "x86_64 aarch64 armv7l ppc64le riscv64"
     env:
       CIBW_BUILD: "${{ matrix.py }}-*"
       # cibuildwheel v3 only builds the free-threaded cp313t/cp314t wheels when
