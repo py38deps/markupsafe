@@ -48,7 +48,9 @@ jobs:
           - "cp314t"
         include:
           # CPython 3.8 and 3.13t are not in the current container images
-          # anymore, pin the last images that still contain them.
+          # anymore, pin the last images that still contain them. The same
+          # tag also exists for manylinux_2_28, which lets auditwheel add the
+          # manylinux_2_28 tag on top of manylinux2014/manylinux_2_17.
           # https://github.com/pypa/manylinux/issues/1882
           - py: "cp38"
             image_tag: "2026.05.02-2"
@@ -64,8 +66,11 @@ jobs:
       # cibuildwheel v3 only builds the free-threaded cp313t/cp314t wheels when
       # this group is enabled, the cp315 pass below runs v4 which rejects it
       CIBW_ENABLE: "cpython-freethreading"
-      CIBW_MANYLINUX_X86_64_IMAGE: "${{ matrix.image_tag && format('quay.io/pypa/manylinux2014_x86_64:{0}', matrix.image_tag) || '' }}"
-      CIBW_MANYLINUX_AARCH64_IMAGE: "${{ matrix.image_tag && format('quay.io/pypa/manylinux2014_aarch64:{0}', matrix.image_tag) || '' }}"
+      # Repair against the manylinux_2_28 policy: a wheel that only needs
+      # glibc 2.17 then gets manylinux_2_17/manylinux2014 *and*
+      # manylinux_2_28 from auditwheel.
+      CIBW_MANYLINUX_X86_64_IMAGE: "${{ matrix.image_tag && format('quay.io/pypa/manylinux_2_28_x86_64:{0}', matrix.image_tag) || '' }}"
+      CIBW_MANYLINUX_AARCH64_IMAGE: "${{ matrix.image_tag && format('quay.io/pypa/manylinux_2_28_aarch64:{0}', matrix.image_tag) || '' }}"
       CIBW_MUSLLINUX_X86_64_IMAGE: "${{ matrix.image_tag && format('quay.io/pypa/musllinux_1_2_x86_64:{0}', matrix.image_tag) || '' }}"
       CIBW_MUSLLINUX_AARCH64_IMAGE: "${{ matrix.image_tag && format('quay.io/pypa/musllinux_1_2_aarch64:{0}', matrix.image_tag) || '' }}"
       # CPython 3.8 has no Windows ARM64 builds, skip that architecture.
